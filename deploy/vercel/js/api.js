@@ -28,6 +28,16 @@
         predict: function (formData) {
             return api('/predict', { method: 'POST', body: formData });
         },
+        health: function () {
+            return api('/health');
+        },
+        warmUp: function () {
+            return fetch(window.RA_CONFIG.base + '/health').then(function (resp) {
+                return resp.json();
+            }).catch(function () {
+                return null;
+            });
+        },
         stats: function () {
             return api('/stats');
         },

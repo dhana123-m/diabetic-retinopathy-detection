@@ -66,7 +66,7 @@
             <div id="loadingSection" class="loading-section hidden">
                 <div class="loading-spinner"></div>
                 <h3>Analyzing Retinal Image</h3>
-                <p>Running EfficientNet-B0 model and generating Grad-CAM heatmap</p>
+                <p>Running EfficientNet-B0 model. First run may take up to a minute while the free-tier server wakes up.</p>
             </div>
         </div>
 
@@ -235,6 +235,8 @@ function getColor(pct) {
     if (p > 20) return '#F59E0B';
     return '#10B981';
 }
+
+RA_API.warmUp();
 </script>
     </main>
 
