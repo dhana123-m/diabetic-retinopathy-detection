@@ -175,8 +175,8 @@ class DRPredictor:
                 logger.warning(f"Fundus conversion failed: {e}. Using original image.")
 
         processed = self.preprocess_image(image_path)
-        predictions = self.model.predict(processed, verbose=0)
-        probs = predictions[0]
+        predictions = self.model(processed, training=False)
+        probs = predictions[0].numpy()
 
         pred_class = int(np.argmax(probs))
         confidence = float(probs[pred_class])
