@@ -18,7 +18,7 @@ from config import (
     RISK_LEVELS, NUM_CLASSES, DEMO_MODE, UPLOADS_DIR,
 )
 from ml.utils import logger
-from ml.train import FocalLoss
+from ml.focal_loss import FocalLoss
 
 
 def validate_fundus_image(image_path: str | Path) -> dict:

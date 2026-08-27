@@ -15,7 +15,6 @@ from pathlib import Path
 
 import numpy as np
 import tensorflow as tf
-import keras.saving
 from tensorflow.keras.applications.efficientnet import EfficientNetB0
 from tensorflow.keras.callbacks import (
     EarlyStopping, ReduceLROnPlateau, ModelCheckpoint,
@@ -40,6 +39,7 @@ from ml.prepare_data import (
     load_csv, validate_images, split_data, create_tf_dataset,
     compute_class_weights,
 )
+from ml.focal_loss import FocalLoss
 from ml.utils import logger, ensure_directories
 
 tf.random.set_seed(RANDOM_SEED)
@@ -54,37 +54,6 @@ if gpus:
         logger.info("Mixed precision enabled for GPU training.")
     except RuntimeError:
         pass
-
-
-@keras.saving.register_keras_serializable(package="ml.train")
-class FocalLoss(tf.keras.losses.Loss):
-    """Focal loss for handling class imbalance."""
-
-    def __init__(self, gamma=2.0, alpha=None, **kwargs):
-        kwargs.setdefault("reduction", "sum_over_batch_size")
-        super().__init__(**kwargs)
-        self.gamma = gamma
-        self.alpha = alpha
-        self._cce = tf.keras.losses.CategoricalCrossentropy(from_logits=False, reduction="none")
-
-    def call(self, y_true, y_pred):
-        y_pred = tf.clip_by_value(y_pred, 1e-7, 1.0 - 1e-7)
-        ce = self._cce(y_true, y_pred)
-        pt = tf.reduce_sum(y_true * y_pred, axis=-1)
-        focal_weight = tf.pow(1.0 - pt, self.gamma)
-        focal_loss = focal_weight * ce
-        if self.alpha is not None:
-            class_weight = tf.reduce_sum(y_true * self.alpha, axis=-1)
-            focal_loss = focal_loss * class_weight
-        return focal_loss
-
-    def get_config(self):
-        config = super().get_config()
-        config.update({
-            "gamma": self.gamma,
-            "alpha": self.alpha.tolist() if self.alpha is not None else None,
-        })
-        return config
 
 
 class CosineWarmupScheduler:

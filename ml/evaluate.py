@@ -26,7 +26,7 @@ from config import (
 )
 from ml.prepare_data import load_csv, validate_images, split_data, create_data_generator
 from ml.utils import logger, ensure_directories
-from ml.train import FocalLoss
+from ml.focal_loss import FocalLoss
 
 
 def load_trained_model():
