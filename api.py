@@ -13,7 +13,6 @@ Run in production (gunicorn):
 
 import os
 import sys
-import threading
 import uuid
 from pathlib import Path
 
@@ -35,28 +34,30 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 CORS(app)
 
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+init_database()
 
 _model_loaded = False
-_model_load_lock = threading.Lock()
 
 
 def _load_model_on_startup() -> None:
-    """Load the trained model once at startup (non-blocking, in background)."""
+    """Load the trained model once, synchronously, before the app serves requests."""
     global _model_loaded
-    with _model_load_lock:
-        if _model_loaded:
-            return
-        predictor = get_predictor()
-        if DEMO_MODE:
-            logger.info("API started in DEMO MODE (simulated predictions).")
-            _model_loaded = True
-            return
-        if not MODEL_PATH.exists():
-            logger.error(f"Model not found: {MODEL_PATH}")
-            return
-        ok = predictor.load_model()
-        _model_loaded = ok
-        logger.info(f"Model load finished: loaded={ok}")
+    if _model_loaded:
+        return
+    predictor = get_predictor()
+    if DEMO_MODE:
+        logger.info("API started in DEMO MODE (simulated predictions).")
+        _model_loaded = True
+        return
+    if not MODEL_PATH.exists():
+        logger.error(f"Model not found: {MODEL_PATH}")
+        return
+    ok = predictor.load_model()
+    _model_loaded = ok
+    logger.info(f"Model load finished: loaded={ok}")
+
+
+_load_model_on_startup()
 
 
 def _validate_image(file) -> tuple[bool, str]:
@@ -178,7 +179,5 @@ def media(filename):
 
 
 if __name__ == "__main__":
-    init_database()
-    threading.Thread(target=_load_model_on_startup, daemon=True).start()
     print(f"\n  RetinaAI ML API running at http://{FLASK_HOST}:{FLASK_PORT}/api/health")
     app.run(host=FLASK_HOST, port=FLASK_PORT, debug=False, threaded=True)
