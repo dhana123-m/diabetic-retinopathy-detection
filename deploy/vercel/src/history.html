@@ -1,0 +1,88 @@
+<div class="container">
+    <div class="page-header">
+        <h1>Prediction History</h1>
+        <p class="subtitle">Complete log of all retinal image analyses</p>
+    </div>
+
+    <div id="historyCard" class="section-card" style="display:none;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+            <h3 style="margin-bottom:0;" id="historyTitle">All Analyses</h3>
+            <button class="btn btn-danger btn-sm" onclick="clearHistory()">&#128465; Clear History</button>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Image</th>
+                        <th>Prediction</th>
+                        <th>Grade</th>
+                        <th>Confidence</th>
+                        <th>Risk</th>
+                    </tr>
+                </thead>
+                <tbody id="historyList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div id="historyEmpty" class="empty-card">
+        <div class="empty-icon">&#128203;</div>
+        <h3>No Predictions Yet</h3>
+        <p style="color:var(--text-secondary);margin:8px 0 16px;">Start by analyzing a retinal fundus image.</p>
+        <a href="/analysis" class="btn btn-primary">Analyze Image</a>
+    </div>
+</div>
+
+<script>
+function renderHistory(predictions) {
+    var list = document.getElementById('historyList');
+    predictions.forEach(function (p) {
+        var tr = document.createElement('tr');
+        tr.onclick = function () { window.location = '/result/' + p.id; };
+        var name = String(p.filename);
+        var cells = [
+            p.id,
+            String(p.timestamp).substring(0, 16),
+            name.length > 25 ? name.substring(0, 25) + '...' : name,
+            '<span class="badge badge-class-' + p.predicted_class + '">' + p.class_name + '</span>',
+            'Grade ' + p.predicted_class,
+            (p.confidence * 100).toFixed(1) + '%',
+            '<span class="risk-badge ' + getRiskClass(p.risk_level) + '">' + p.risk_level + '</span>'
+        ];
+        cells.forEach(function (c) {
+            var td = document.createElement('td');
+            if (c === p.id) { td.textContent = c; } else { td.innerHTML = c; }
+            tr.appendChild(td);
+        });
+        list.appendChild(tr);
+    });
+}
+
+function clearHistory() {
+    if (!confirm('Are you sure you want to clear all prediction history? This cannot be undone.')) return;
+    RA_API.clearHistory()
+        .then(function () {
+            showNotification('History cleared successfully.', 'success');
+            window.location.reload();
+        })
+        .catch(function (err) {
+            showNotification(err.message || 'Failed to clear history.', 'error');
+        });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    RA_API.history().then(function (data) {
+        var predictions = data.predictions || [];
+        if (predictions.length > 0) {
+            document.getElementById('historyTitle').textContent = 'All Analyses (' + predictions.length + ' records)';
+            document.getElementById('historyCard').style.display = 'block';
+            document.getElementById('historyEmpty').style.display = 'none';
+            renderHistory(predictions);
+        }
+    }).catch(function (err) {
+        showNotification('Could not load history: ' + err.message, 'error');
+    });
+});
+</script>

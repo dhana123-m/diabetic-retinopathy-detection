@@ -1,0 +1,204 @@
+<div class="container">
+    <div class="page-header">
+        <h1>Retinal Image Analysis</h1>
+        <p class="subtitle">Upload a retinal fundus image for diabetic retinopathy screening</p>
+    </div>
+
+    <div class="analysis-layout">
+        <div class="upload-section">
+            <div class="upload-card" id="uploadArea">
+                <div class="upload-icon">&#128064;</div>
+                <h3>Drop your retinal image here</h3>
+                <p class="upload-text">or click to browse</p>
+                <p class="upload-subtext">&mdash;</p>
+                <label class="btn btn-secondary upload-btn" for="fileInput">Choose Image</label>
+                <input type="file" id="fileInput" accept=".jpg,.jpeg,.png" hidden>
+                <p class="upload-formats">Supports JPG, JPEG, PNG &middot; Max 16 MB</p>
+            </div>
+
+            <div id="previewSection" class="preview-section hidden">
+                <h3>Image Preview</h3>
+                <div class="preview-container">
+                    <img id="previewImage" src="" alt="Preview">
+                </div>
+                <div class="action-buttons" style="justify-content:center;">
+                    <button class="btn btn-primary btn-lg" id="analyzeBtn" onclick="analyzeImage()">
+                        &#128269; Analyze Image
+                    </button>
+                    <button class="btn btn-secondary" onclick="resetUpload()">Choose Different Image</button>
+                </div>
+            </div>
+
+            <div id="loadingSection" class="loading-section hidden">
+                <div class="loading-spinner"></div>
+                <h3>Analyzing Retinal Image</h3>
+                <p>Running EfficientNet-B0 model and generating Grad-CAM heatmap</p>
+            </div>
+        </div>
+
+        <div id="resultSection" class="result-section hidden">
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedFile = null;
+const uploadArea = document.getElementById('uploadArea');
+const fileInput = document.getElementById('fileInput');
+const previewSection = document.getElementById('previewSection');
+const previewImage = document.getElementById('previewImage');
+const loadingSection = document.getElementById('loadingSection');
+const resultSection = document.getElementById('resultSection');
+
+uploadArea.addEventListener('dragover', function (e) {
+    e.preventDefault();
+    uploadArea.classList.add('drag-over');
+});
+uploadArea.addEventListener('dragleave', function () {
+    uploadArea.classList.remove('drag-over');
+});
+uploadArea.addEventListener('drop', function (e) {
+    e.preventDefault();
+    uploadArea.classList.remove('drag-over');
+    if (e.dataTransfer.files.length) {
+        handleFile(e.dataTransfer.files[0]);
+    }
+});
+uploadArea.addEventListener('click', function (e) {
+    if (e.target.tagName !== 'LABEL' && e.target.tagName !== 'INPUT') {
+        fileInput.click();
+    }
+});
+fileInput.addEventListener('change', function () {
+    if (fileInput.files.length) {
+        handleFile(fileInput.files[0]);
+    }
+});
+
+function handleFile(file) {
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+        showNotification('Unsupported format. Please upload a JPG or PNG image.', 'error');
+        return;
+    }
+    if (file.size > 16 * 1024 * 1024) {
+        showNotification('File too large. Maximum size is 16 MB.', 'error');
+        return;
+    }
+    selectedFile = file;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        previewImage.src = e.target.result;
+        uploadArea.classList.add('hidden');
+        previewSection.classList.remove('hidden');
+        resultSection.classList.add('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+
+function resetUpload() {
+    selectedFile = null;
+    fileInput.value = '';
+    uploadArea.classList.remove('hidden');
+    previewSection.classList.add('hidden');
+    loadingSection.classList.add('hidden');
+    resultSection.classList.add('hidden');
+}
+
+function analyzeImage() {
+    if (!selectedFile) return;
+    previewSection.classList.add('hidden');
+    loadingSection.classList.remove('hidden');
+    resultSection.classList.add('hidden');
+
+    const formData = new FormData();
+    formData.append('image', selectedFile);
+
+    RA_API.predict(formData)
+        .then(function (data) {
+            loadingSection.classList.add('hidden');
+            showResults(data);
+        })
+        .catch(function (err) {
+            loadingSection.classList.add('hidden');
+            showNotification(err.message || 'Analysis failed. Please try again.', 'error');
+            previewSection.classList.remove('hidden');
+        });
+}
+
+function showResults(data) {
+    const pred = data.prediction;
+    const gc = data.gradcam;
+
+    let probBars = '';
+    Object.keys(pred.probabilities).forEach(function (name) {
+        const prob = pred.probabilities[name];
+        const pct = (prob * 100).toFixed(1);
+        probBars += '<div class="prob-row">' +
+            '<span class="prob-label">' + name + '</span>' +
+            '<div class="prob-bar-container">' +
+            '<div class="prob-bar" style="width:' + pct + '%;background:' + getColor(pct) + ';"></div>' +
+            '</div>' +
+            '<span class="prob-value">' + pct + '%</span></div>';
+    });
+
+    const riskClass = getRiskClass(pred.risk_level);
+
+    let banners = '';
+    if (pred.image_type === 'converted') {
+        banners += '<div class="warning-banner warning-banner-converted">' +
+            '<span class="warning-banner-icon">&#9888;</span>' +
+            '<span>This image was NOT a retinal fundus photo. It has been automatically converted. Results are experimental and should NOT be used for clinical decisions.</span></div>';
+    }
+    if (pred.low_confidence_warning) {
+        banners += '<div class="warning-banner warning-banner-low-confidence">' +
+            '<span class="warning-banner-icon">&#9888;</span>' +
+            '<span>' + pred.low_confidence_warning + '</span></div>';
+    }
+
+    let imageTypeBadge = pred.image_type === 'converted'
+        ? '<span class="badge badge-class-2">Converted</span>'
+        : '<span class="badge badge-class-0">Fundus</span>';
+
+    resultSection.innerHTML =
+        '<div class="result-card">' +
+            '<h2>Analysis Results</h2>' + banners +
+            '<div class="result-grid">' +
+                '<div class="result-item"><span class="result-label">Prediction</span><span class="result-value">' + pred.class_name + '</span></div>' +
+                '<div class="result-item"><span class="result-label">Severity</span><span class="result-value">Grade ' + pred.predicted_class + '</span></div>' +
+                '<div class="result-item"><span class="result-label">Confidence</span><span class="result-value confidence-value">' + pred.confidence_str + '</span></div>' +
+                '<div class="result-item"><span class="result-label">Risk Level</span><span class="result-value"><span class="risk-badge ' + riskClass + '">' + pred.risk_level + '</span></span></div>' +
+                '<div class="result-item"><span class="result-label">Image Type</span><span class="result-value">' + imageTypeBadge + '</span></div>' +
+            '</div>' +
+
+            '<div class="image-comparison">' +
+                '<div class="comparison-item"><h4>Original Image</h4><img src="' + RA_API.media(gc.original) + '" alt="Original"></div>' +
+                '<div class="comparison-item"><h4>Grad-CAM Heatmap</h4>' +
+                    (gc.heatmap ? '<img src="' + RA_API.media(gc.heatmap) + '" alt="Heatmap">' : '<p class="empty-state">Heatmap not available</p>') +
+                '</div>' +
+                '<div class="comparison-item"><h4>Overlay</h4>' +
+                    (gc.overlay ? '<img src="' + RA_API.media(gc.overlay) + '" alt="Overlay">' : '<p class="empty-state">Overlay not available</p>') +
+                '</div>' +
+            '</div>' +
+
+            '<h3>Class Probabilities</h3>' +
+            '<div class="prob-container">' + probBars + '</div>' +
+
+            '<div class="action-buttons" style="justify-content:center;">' +
+                '<a href="/result/' + data.record_id + '" class="btn btn-secondary">View Full Report</a>' +
+                '<button class="btn btn-primary" onclick="resetUpload()">Analyze Another Image</button>' +
+            '</div>' +
+        '</div>';
+
+    resultSection.classList.remove('hidden');
+    resultSection.scrollIntoView({ behavior: 'auto', block: 'start' });
+}
+
+function getColor(pct) {
+    var p = parseFloat(pct);
+    if (p > 70) return '#EF4444';
+    if (p > 40) return '#F97316';
+    if (p > 20) return '#F59E0B';
+    return '#10B981';
+}
+</script>

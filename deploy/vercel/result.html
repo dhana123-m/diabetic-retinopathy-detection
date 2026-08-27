@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis Result — RetinaAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="brand-icon">&#128064;</span>
+                <span>RetinaAI</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="/" class="nav-link">Dashboard</a>
+                <a href="/analysis" class="nav-link">Analysis</a>
+                <a href="/history" class="nav-link">History</a>
+                <a href="/about" class="nav-link">About</a>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+        </div>
+    </nav>
+
+    <div class="disclaimer-bar">
+        &#9888; AI-generated results are for educational/research purposes only. Not a medical diagnosis. Consult a qualified ophthalmologist.
+    </div>
+
+    <main class="main-content">
+<div class="container">
+    <div class="page-header">
+        <h1>Analysis Result</h1>
+        <p class="subtitle">Detailed prediction report</p>
+    </div>
+
+    <div id="resultSection" class="empty-card">
+        <div class="empty-icon">&#128269;</div>
+        <h3>Loading Report&hellip;</h3>
+    </div>
+</div>
+
+<script>
+function renderRecord(record) {
+    var originalImg = record.original_image_path
+        ? '<img src="' + RA_API.media(record.original_image_path) + '" alt="Original">'
+        : '<p class="empty-state">Original image not available</p>';
+    var gradcamImg = record.gradcam_image_path
+        ? '<img src="' + RA_API.media(record.gradcam_image_path) + '" alt="Grad-CAM">'
+        : '<p class="empty-state">Grad-CAM visualization not available</p>';
+
+    document.getElementById('resultSection').className = 'result-card';
+    document.getElementById('resultSection').innerHTML =
+        '<h2>Diabetic Retinopathy Analysis</h2>' +
+        '<p class="result-filename">Image: ' + escapeHtml(record.filename) + '</p>' +
+        '<p class="result-timestamp">Analyzed: ' + escapeHtml(record.timestamp) + '</p>' +
+
+        '<div class="result-grid">' +
+            '<div class="result-item"><span class="result-label">Prediction</span><span class="result-value">' + escapeHtml(record.class_name) + '</span></div>' +
+            '<div class="result-item"><span class="result-label">Severity Grade</span><span class="result-value">Grade ' + record.predicted_class + '</span></div>' +
+            '<div class="result-item"><span class="result-label">Confidence</span><span class="result-value confidence-value">' + (record.confidence * 100).toFixed(1) + '%</span></div>' +
+            '<div class="result-item"><span class="result-label">Risk Level</span><span class="result-value"><span class="risk-badge ' + getRiskClass(record.risk_level) + '">' + escapeHtml(record.risk_level) + '</span></span></div>' +
+        '</div>' +
+
+        '<div class="image-comparison">' +
+            '<div class="comparison-item"><h4>Original Fundus Image</h4>' + originalImg + '</div>' +
+            '<div class="comparison-item"><h4>Grad-CAM Overlay</h4>' + gradcamImg + '</div>' +
+        '</div>' +
+
+        '<div class="disclaimer-box"><strong>&#9888; Disclaimer:</strong> AI-generated results are for educational/research purposes only and must not be considered a medical diagnosis. Please consult a qualified ophthalmologist for professional evaluation.</div>' +
+
+        '<div class="action-buttons" style="justify-content:center;">' +
+            '<a href="/analysis" class="btn btn-primary">Analyze Another Image</a>' +
+            '<a href="/history" class="btn btn-secondary">Back to History</a>' +
+            '<a href="/" class="btn btn-secondary">Dashboard</a>' +
+        '</div>';
+}
+
+function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var params = new URLSearchParams(window.location.search);
+    var recordId = params.get('record_id');
+
+    if (!recordId) {
+        document.getElementById('resultSection').innerHTML =
+            '<h3>No record specified</h3>' +
+            '<p style="color:var(--text-secondary);margin:8px 0 16px;">Please open a result from the history page.</p>' +
+            '<a href="/history" class="btn btn-primary">View History</a>';
+        return;
+    }
+
+    RA_API.historyDetail(recordId).then(function (data) {
+        renderRecord(data.prediction);
+    }).catch(function (err) {
+        document.getElementById('resultSection').innerHTML =
+            '<h3>Report Not Found</h3>' +
+            '<p style="color:var(--text-secondary);margin:8px 0 16px;">This analysis could not be found or is no longer available.</p>' +
+            '<a href="/history" class="btn btn-primary">View History</a>';
+    });
+});
+</script>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <p><strong>RetinaAI</strong> &mdash; Diabetic Retinopathy Detection System</p>
+            <p class="footer-disclaimer">Educational research prototype. Not intended for medical diagnosis. Powered by EfficientNet-B0 + Grad-CAM.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

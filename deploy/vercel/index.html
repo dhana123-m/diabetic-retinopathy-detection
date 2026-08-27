@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard — RetinaAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="brand-icon">&#128064;</span>
+                <span>RetinaAI</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="/" class="nav-link active">Dashboard</a>
+                <a href="/analysis" class="nav-link">Analysis</a>
+                <a href="/history" class="nav-link">History</a>
+                <a href="/about" class="nav-link">About</a>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+        </div>
+    </nav>
+
+    <div class="disclaimer-bar">
+        &#9888; AI-generated results are for educational/research purposes only. Not a medical diagnosis. Consult a qualified ophthalmologist.
+    </div>
+
+    <main class="main-content">
+<div class="container">
+    <div class="page-header">
+        <h1>Diabetic Retinopathy Detection</h1>
+        <p class="subtitle">AI-powered retinal image analysis using deep learning</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">&#128202;</div>
+            <div class="stat-info">
+                <span class="stat-number" id="statTotal">0</span>
+                <span class="stat-label">Total Analyses</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">&#9989;</div>
+            <div class="stat-info">
+                <span class="stat-number" id="statNoDr">0</span>
+                <span class="stat-label">No DR</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow">&#9888;&#65039;</div>
+            <div class="stat-info">
+                <span class="stat-number" id="statMild">0</span>
+                <span class="stat-label">Mild</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">&#128992;</div>
+            <div class="stat-info">
+                <span class="stat-number" id="statModerate">0</span>
+                <span class="stat-label">Moderate</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">&#128680;</div>
+            <div class="stat-info">
+                <span class="stat-number" id="statSevere">0</span>
+                <span class="stat-label">Severe</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon darkred">&#128308;</div>
+            <div class="stat-info">
+                <span class="stat-number" id="statProliferative">0</span>
+                <span class="stat-label">Proliferative</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <div class="chart-card">
+            <h3>Prediction Distribution</h3>
+            <canvas id="distributionChart" height="260"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Severity Breakdown</h3>
+            <canvas id="severityChart" height="260"></canvas>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h3>Recent Activity</h3>
+        <div id="recentEmpty" class="empty-state hidden">
+            <div style="font-size:2.5rem;margin-bottom:12px;">&#128064;</div>
+            <p>No analyses yet. Start by uploading a retinal image.</p>
+        </div>
+        <div id="recentTableWrap" style="overflow-x:auto;display:none;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Image</th>
+                        <th>Prediction</th>
+                        <th>Confidence</th>
+                        <th>Risk</th>
+                    </tr>
+                </thead>
+                <tbody id="recentList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <a href="/analysis" class="btn btn-primary btn-lg">Analyze New Image</a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var fullNames = [
+        'No Diabetic Retinopathy',
+        'Mild Diabetic Retinopathy',
+        'Moderate Diabetic Retinopathy',
+        'Severe Diabetic Retinopathy',
+        'Proliferative Diabetic Retinopathy'
+    ];
+    var shortNames = ['No DR', 'Mild DR', 'Moderate DR', 'Severe DR', 'Proliferative DR'];
+    var colors = ['#10B981', '#F59E0B', '#F97316', '#EF4444', '#8B5CF6'];
+    var ids = ['statNoDr', 'statMild', 'statModerate', 'statSevere', 'statProliferative'];
+
+    RA_API.stats().then(function (stats) {
+        document.getElementById('statTotal').textContent = stats.total;
+
+        var values = fullNames.map(function (name) {
+            return stats.class_counts[name] || 0;
+        });
+        values.forEach(function (v, i) {
+            document.getElementById(ids[i]).textContent = v;
+        });
+
+        if (values.some(function (v) { return v > 0; })) {
+            new Chart(document.getElementById('distributionChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: shortNames,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 3,
+                        borderColor: '#fff',
+                        hoverBorderWidth: 0,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '65%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10, font: { size: 12, family: 'Inter' } }
+                        }
+                    },
+                    animation: false
+                }
+            });
+
+            new Chart(document.getElementById('severityChart'), {
+                type: 'bar',
+                data: {
+                    labels: shortNames,
+                    datasets: [{
+                        label: 'Count',
+                        data: values,
+                        backgroundColor: colors.map(function (c) { return c + 'CC'; }),
+                        hoverBackgroundColor: colors,
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barThickness: 36
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, font: { family: 'Inter' } },
+                            grid: { color: '#F1F5F9' }
+                        },
+                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        var recent = stats.recent || [];
+        if (recent.length > 0) {
+            document.getElementById('recentTableWrap').style.display = 'block';
+            var tbody = document.getElementById('recentList');
+            recent.forEach(function (p) {
+                var tr = document.createElement('tr');
+                tr.onclick = function () { window.location = '/result/' + p.id; };
+                var cells = [
+                    String(p.timestamp).substring(0, 16),
+                    String(p.filename).substring(0, 20),
+                    '<span class="badge badge-class-' + p.predicted_class + '">' + p.class_name + '</span>',
+                    (p.confidence * 100).toFixed(1) + '%',
+                    '<span class="risk-badge ' + getRiskClass(p.risk_level) + '">' + p.risk_level + '</span>'
+                ];
+                cells.forEach(function (c) {
+                    var td = document.createElement('td');
+                    td.innerHTML = c;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+        } else {
+            document.getElementById('recentEmpty').classList.remove('hidden');
+        }
+    }).catch(function (err) {
+        showNotification('Could not load statistics: ' + err.message, 'error');
+    });
+});
+</script>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <p><strong>RetinaAI</strong> &mdash; Diabetic Retinopathy Detection System</p>
+            <p class="footer-disclaimer">Educational research prototype. Not intended for medical diagnosis. Powered by EfficientNet-B0 + Grad-CAM.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

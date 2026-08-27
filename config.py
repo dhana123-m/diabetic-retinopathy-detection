@@ -3,6 +3,7 @@ Configuration module for Diabetic Retinopathy Detection System.
 All configurable parameters are centralized here.
 """
 
+import os
 from pathlib import Path
 
 # ──────────────────────────────────────────────
@@ -15,10 +16,14 @@ TEST_IMAGES_DIR = DATA_DIR / "test_images"
 TRAIN_CSV = DATA_DIR / "train.csv"
 MODELS_DIR = BASE_DIR / "models"
 RESULTS_DIR = BASE_DIR / "results"
-DATABASE_DIR = BASE_DIR / "database"
-UPLOADS_DIR = BASE_DIR / "uploads"
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
+
+# Optional persistent data root for serverless/server hosts.
+# Set RA_DATA_ROOT to a persistent disk location in production.
+_DATA_ROOT = Path(os.environ["RA_DATA_ROOT"]) if os.environ.get("RA_DATA_ROOT") else BASE_DIR
+DATABASE_DIR = _DATA_ROOT / "database"
+UPLOADS_DIR = _DATA_ROOT / "uploads"
 
 # ──────────────────────────────────────────────
 # Model Paths

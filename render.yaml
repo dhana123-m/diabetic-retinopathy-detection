@@ -1,0 +1,19 @@
+# Render blueprint for the RetinaAI ML API backend.
+# Imports the same Flask app that the Vercel static frontend talks to.
+services:
+  - type: web
+    name: retinaai-api
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r api-requirements.txt
+    startCommand: gunicorn api:app --workers 1 --threads 2 --timeout 300 --bind 0.0.0.0:$PORT
+    healthCheckPath: /api/health
+    disk:
+      name: retinaai-data
+      mountPath: /opt/data
+      sizeGB: 1
+    envVars:
+      - key: RA_DATA_ROOT
+        value: /opt/data
+      - key: DEMO_MODE
+        value: "false"

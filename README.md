@@ -132,6 +132,53 @@ python app.py
 
 Open http://127.0.0.1:5000 in your browser.
 
+## Deployment (Vercel + ML API)
+
+The system is split into two parts because TensorFlow cannot run inside Vercel's
+serverless functions:
+
+- **`api.py`** — Flask API backend (prediction, history, statistics, media files).
+  Deploy on **Render** (or any Python host that supports a persistent disk and
+  can run TensorFlow). Includes `render.yaml` and `api-requirements.txt`.
+- **`deploy/vercel/`** — static frontend (plain HTML/CSS/JS + Chart.js from CDN).
+  Deploy the folder on **Vercel** as a static site. `vercel.json` proxies every
+  `/api/*` request to the backend, so no CORS is needed in production.
+
+### 1. Deploy the ML API
+
+Option A — Render blueprint:
+
+1. Push this repository to GitHub.
+2. In Render, create a **Blueprint** from the repo (it reads `render.yaml`).
+3. The service starts via `gunicorn api:app`. Set the `RA_DATA_ROOT` env var to
+   the mounted disk path (`/opt/data` in the blueprint) so history/uploads persist.
+4. Note the service URL, e.g. `https://retinaai-api.onrender.com`.
+
+Option B — run locally: `python api.py` (serves on `http://127.0.0.1:5000`).
+
+### 2. Deploy the frontend on Vercel
+
+```bash
+cd deploy/vercel
+python build.py        # regenerate pages after editing ./src
+npm i -g vercel
+vercel                  # link project, upload, done
+```
+
+1. Edit `vercel.json` if your backend URL differs.
+2. The site is fully static. `js/config.js` calls `/api/*` in production
+   (rewritten by Vercel to the backend) or `http://127.0.0.1:5000/api` when
+   opened from `localhost`.
+
+### 3. Local split test
+
+```bash
+python api.py                          # terminal 1 — API on :5000
+python -m http.server 8899 --directory deploy/vercel   # terminal 2 — static site
+```
+
+Open http://127.0.0.1:8899 in your browser.
+
 ## Demo Mode
 
 For UI testing without a trained model, set `DEMO_MODE = True` in `config.py`. This simulates predictions and is clearly labeled in the interface.

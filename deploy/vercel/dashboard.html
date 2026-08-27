@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics Dashboard — RetinaAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="brand-icon">&#128064;</span>
+                <span>RetinaAI</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="/" class="nav-link active">Dashboard</a>
+                <a href="/analysis" class="nav-link">Analysis</a>
+                <a href="/history" class="nav-link">History</a>
+                <a href="/about" class="nav-link">About</a>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+        </div>
+    </nav>
+
+    <div class="disclaimer-bar">
+        &#9888; AI-generated results are for educational/research purposes only. Not a medical diagnosis. Consult a qualified ophthalmologist.
+    </div>
+
+    <main class="main-content">
+<div class="container">
+    <div class="page-header">
+        <h1>Analytics Dashboard</h1>
+        <p class="subtitle">Overview of all analyses performed</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card" style="grid-column:span 2;">
+            <div class="stat-icon blue">&#128202;</div>
+            <div class="stat-info">
+                <span class="stat-number" id="statTotal">0</span>
+                <span class="stat-label">Total Analyses Performed</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <div class="chart-card">
+            <h3>Class Distribution</h3>
+            <canvas id="pieChart" height="300"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Risk Level Distribution</h3>
+            <canvas id="riskChart" height="300"></canvas>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <div class="chart-card" style="grid-column:1/-1;">
+            <h3>Predictions Over Time</h3>
+            <canvas id="timelineChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <a href="/analysis" class="btn btn-primary">New Analysis</a>
+        <a href="/history" class="btn btn-secondary">View History</a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var fullNames = [
+        'No Diabetic Retinopathy',
+        'Mild Diabetic Retinopathy',
+        'Moderate Diabetic Retinopathy',
+        'Severe Diabetic Retinopathy',
+        'Proliferative Diabetic Retinopathy'
+    ];
+    var shortNames = ['No DR', 'Mild DR', 'Moderate DR', 'Severe DR', 'Proliferative DR'];
+    var colors = ['#10B981', '#F59E0B', '#F97316', '#EF4444', '#8B5CF6'];
+
+    RA_API.stats().then(function (stats) {
+        document.getElementById('statTotal').textContent = stats.total;
+
+        var values = fullNames.map(function (name) {
+            return stats.class_counts[name] || 0;
+        });
+
+        if (values.some(function (v) { return v > 0; })) {
+            new Chart(document.getElementById('pieChart'), {
+                type: 'pie',
+                data: {
+                    labels: shortNames,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 3,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { padding: 16, usePointStyle: true, font: { family: 'Inter' } }
+                        }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        var riskCounts = stats.risk_counts || {};
+        var riskLabels = Object.keys(riskCounts);
+        var riskValues = riskLabels.map(function (k) { return riskCounts[k]; });
+        if (riskLabels.length > 0) {
+            new Chart(document.getElementById('riskChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: riskLabels,
+                    datasets: [{
+                        data: riskValues,
+                        backgroundColor: colors,
+                        borderWidth: 3,
+                        borderColor: '#fff',
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '60%',
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: { padding: 16, usePointStyle: true, font: { family: 'Inter' } }
+                        }
+                    },
+                    animation: false
+                }
+            });
+        }
+
+        var recent = stats.recent || [];
+        if (recent.length > 0) {
+            var timeLabels = recent.map(function (r) { return r.timestamp.substring(5, 16); }).reverse();
+            var timeValues = recent.map(function (r) { return r.confidence * 100; }).reverse();
+            new Chart(document.getElementById('timelineChart'), {
+                type: 'line',
+                data: {
+                    labels: timeLabels,
+                    datasets: [{
+                        label: 'Confidence %',
+                        data: timeValues,
+                        borderColor: '#2563EB',
+                        backgroundColor: 'rgba(37,99,235,0.08)',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#2563EB',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 100, grid: { color: '#F1F5F9' }, ticks: { font: { family: 'Inter' } } },
+                        x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 }, maxRotation: 45 } }
+                    },
+                    plugins: { legend: { display: false } },
+                    animation: false
+                }
+            });
+        }
+    }).catch(function (err) {
+        showNotification('Could not load statistics: ' + err.message, 'error');
+    });
+});
+</script>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <p><strong>RetinaAI</strong> &mdash; Diabetic Retinopathy Detection System</p>
+            <p class="footer-disclaimer">Educational research prototype. Not intended for medical diagnosis. Powered by EfficientNet-B0 + Grad-CAM.</p>
+        </div>
+    </footer>
+
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

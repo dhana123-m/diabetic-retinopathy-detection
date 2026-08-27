@@ -1,0 +1,14 @@
+{
+  "version": 2,
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://retinaai-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/result/:id",
+      "destination": "/result.html?record_id=:id"
+    }
+  ]
+}
