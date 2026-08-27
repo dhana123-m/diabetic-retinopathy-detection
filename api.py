@@ -86,6 +86,26 @@ def _safe_filename(original: str) -> str:
     return f"{uuid.uuid4().hex[:12]}{ext}"
 
 
+@app.route("/")
+def home():
+    """Service info for anyone opening the API root."""
+    return jsonify({
+        "service": "RetinaAI ML API",
+        "status": "ok",
+        "model": "loaded" if (_model_loaded or DEMO_MODE) else "loading",
+        "demo_mode": DEMO_MODE,
+        "endpoints": [
+            "GET /api/health",
+            "POST /api/predict",
+            "GET /api/history",
+            "GET /api/history/<record_id>",
+            "DELETE /api/history",
+            "GET /api/stats",
+            "GET /api/media/<file>",
+        ],
+    })
+
+
 @app.route("/api/health")
 def health():
     """Health check used by the host platform."""
