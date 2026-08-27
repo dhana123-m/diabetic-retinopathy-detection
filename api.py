@@ -17,6 +17,10 @@ import time
 import uuid
 from pathlib import Path
 
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
+
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 
