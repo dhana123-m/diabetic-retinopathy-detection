@@ -14,6 +14,7 @@ Run in production (gunicorn):
 import os
 import sys
 import time
+import threading
 import uuid
 from pathlib import Path
 
@@ -42,6 +43,7 @@ UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 init_database()
 
 _model_loaded = False
+_model_load_lock = threading.Lock()
 
 
 def _load_model_on_startup() -> None:
@@ -62,7 +64,10 @@ def _load_model_on_startup() -> None:
     logger.info(f"Model load finished: loaded={ok}")
 
 
-_load_model_on_startup()
+def _ensure_model_loaded() -> None:
+    """Load the model on first use inside the serving worker process."""
+    with _model_load_lock:
+        _load_model_on_startup()
 
 
 def _validate_image(file) -> tuple[bool, str]:
@@ -84,7 +89,7 @@ def _safe_filename(original: str) -> str:
 @app.route("/api/health")
 def health():
     """Health check used by the host platform."""
-    predictor = get_predictor()
+    _ensure_model_loaded()
     status = "ok" if (_model_loaded or DEMO_MODE) else "starting"
     return jsonify({"status": status, "demo_mode": DEMO_MODE, "model": "loaded" if _model_loaded else "loading"}), (200 if status == "ok" else 503)
 
@@ -109,10 +114,10 @@ def predict():
         save_path = UPLOADS_DIR / safe_name
         file.save(str(save_path))
 
+        _ensure_model_loaded()
         predictor = get_predictor()
         if not predictor.model and not DEMO_MODE:
-            if not predictor.load_model():
-                return jsonify({"error": "AI model is still loading. Please retry in a few seconds."}), 503
+            return jsonify({"error": "AI model is still loading. Please retry in a few seconds."}), 503
 
         _start = time.time()
         prediction = predictor.predict(save_path)
