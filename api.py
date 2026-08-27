@@ -13,6 +13,7 @@ Run in production (gunicorn):
 
 import os
 import sys
+import time
 import uuid
 from pathlib import Path
 
@@ -90,10 +91,14 @@ def predict():
     if request.method == "OPTIONS":
         return ("", 204)
 
+    logger.info(f"POST /api/predict arrival")
+
     file = request.files.get("image")
     valid, msg = _validate_image(file)
     if not valid:
         return jsonify({"error": msg}), 400
+
+    logger.info(f"POST /api/predict received: file={file.filename} size={request.content_length}")
 
     try:
         safe_name = _safe_filename(file.filename)
@@ -105,13 +110,17 @@ def predict():
             if not predictor.load_model():
                 return jsonify({"error": "AI model is still loading. Please retry in a few seconds."}), 503
 
+        _start = time.time()
         prediction = predictor.predict(save_path)
+        logger.info(f"Prediction done in {time.time() - _start:.1f}s class={prediction['class_name']} conf={prediction['confidence']:.3f}")
 
-        try:
-            gradcam_result = generate_gradcam(save_path, None, prediction["predicted_class"])
-        except Exception as e:
-            logger.warning(f"Grad-CAM generation failed: {e}")
-            gradcam_result = {}
+        gradcam_result = {}
+        if os.environ.get("GENERATE_GRADCAM", "0") == "1":
+            try:
+                gradcam_result = generate_gradcam(save_path, None, prediction["predicted_class"])
+            except Exception as e:
+                logger.warning(f"Grad-CAM generation failed: {e}")
+                gradcam_result = {}
 
         record_id = insert_prediction(
             filename=file.filename,
