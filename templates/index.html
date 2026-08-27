@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — RetinaAI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Diabetic Retinopathy Detection</h1>
+        <p class="subtitle">AI-powered retinal image analysis using deep learning</p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">&#128202;</div>
+            <div class="stat-info">
+                <span class="stat-number" data-count="{{ stats.total }}">{{ stats.total }}</span>
+                <span class="stat-label">Total Analyses</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">&#9989;</div>
+            <div class="stat-info">
+                <span class="stat-number">{{ stats.class_counts.get('No Diabetic Retinopathy', 0) }}</span>
+                <span class="stat-label">No DR</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow">&#9888;&#65039;</div>
+            <div class="stat-info">
+                <span class="stat-number">{{ stats.class_counts.get('Mild Diabetic Retinopathy', 0) }}</span>
+                <span class="stat-label">Mild</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">&#128992;</div>
+            <div class="stat-info">
+                <span class="stat-number">{{ stats.class_counts.get('Moderate Diabetic Retinopathy', 0) }}</span>
+                <span class="stat-label">Moderate</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">&#128680;</div>
+            <div class="stat-info">
+                <span class="stat-number">{{ stats.class_counts.get('Severe Diabetic Retinopathy', 0) }}</span>
+                <span class="stat-label">Severe</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon darkred">&#128308;</div>
+            <div class="stat-info">
+                <span class="stat-number">{{ stats.class_counts.get('Proliferative Diabetic Retinopathy', 0) }}</span>
+                <span class="stat-label">Proliferative</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="charts-row">
+        <div class="chart-card">
+            <h3>Prediction Distribution</h3>
+            <canvas id="distributionChart" height="260"></canvas>
+        </div>
+        <div class="chart-card">
+            <h3>Severity Breakdown</h3>
+            <canvas id="severityChart" height="260"></canvas>
+        </div>
+    </div>
+
+    <div class="section-card">
+        <h3>Recent Activity</h3>
+        {% if stats.recent %}
+        <div style="overflow-x:auto;">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Image</th>
+                    <th>Prediction</th>
+                    <th>Confidence</th>
+                    <th>Risk</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in stats.recent %}
+                <tr onclick="window.location='/result/{{ p.id }}'">
+                    <td>{{ p.timestamp[:16] }}</td>
+                    <td>{{ p.filename[:20] }}</td>
+                    <td><span class="badge badge-class-{{ p.predicted_class }}">{{ p.class_name }}</span></td>
+                    <td>{{ "%.1f"|format(p.confidence * 100) }}%</td>
+                    <td><span class="risk-badge risk-{{ p.risk_level|lower|replace('-','')|replace(' ','') }}">{{ p.risk_level }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div style="font-size:2.5rem;margin-bottom:12px;">&#128064;</div>
+            <p>No analyses yet. Start by uploading a retinal image.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="action-bar">
+        <a href="/analysis" class="btn btn-primary btn-lg">Analyze New Image</a>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const classCounts = {{ stats.class_counts | tojson }};
+    const classNames = ['No DR', 'Mild DR', 'Moderate DR', 'Severe DR', 'Proliferative DR'];
+    const fullNames = [
+        'No Diabetic Retinopathy',
+        'Mild Diabetic Retinopathy',
+        'Moderate Diabetic Retinopathy',
+        'Severe Diabetic Retinopathy',
+        'Proliferative Diabetic Retinopathy'
+    ];
+    const values = fullNames.map(n => classCounts[n] || 0);
+    const colors = ['#10B981', '#F59E0B', '#F97316', '#EF4444', '#8B5CF6'];
+
+    if (values.some(v => v > 0)) {
+        new Chart(document.getElementById('distributionChart'), {
+            type: 'doughnut',
+            data: {
+                labels: classNames,
+                datasets: [{
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 3,
+                    borderColor: '#fff',
+                    hoverBorderWidth: 0,
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: { padding: 16, usePointStyle: true, pointStyleWidth: 10, font: { size: 12, family: 'Inter' } }
+                    }
+                },
+                animation: false
+            }
+        });
+
+        new Chart(document.getElementById('severityChart'), {
+            type: 'bar',
+            data: {
+                labels: classNames,
+                datasets: [{
+                    label: 'Count',
+                    data: values,
+                    backgroundColor: colors.map(c => c + 'CC'),
+                    hoverBackgroundColor: colors,
+                    borderRadius: 8,
+                    borderSkipped: false,
+                    barThickness: 36
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1, font: { family: 'Inter' } },
+                        grid: { color: '#F1F5F9' }
+                    },
+                    x: { grid: { display: false }, ticks: { font: { family: 'Inter', size: 11 } } }
+                },
+                animation: false
+            }
+        });
+    } else {
+        document.getElementById('distributionChart').parentElement.innerHTML += '<p class="empty-state">No data yet</p>';
+        document.getElementById('severityChart').parentElement.innerHTML += '<p class="empty-state">No data yet</p>';
+    }
+});
+</script>
+{% endblock %}

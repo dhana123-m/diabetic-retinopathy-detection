@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Analysis Result — RetinaAI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Analysis Result</h1>
+        <p class="subtitle">Detailed prediction report</p>
+    </div>
+
+    <div class="result-card">
+        <h2>Diabetic Retinopathy Analysis</h2>
+        <p class="result-filename">Image: {{ record.filename }}</p>
+        <p class="result-timestamp">Analyzed: {{ record.timestamp }}</p>
+
+        <div class="result-grid">
+            <div class="result-item">
+                <span class="result-label">Prediction</span>
+                <span class="result-value">{{ record.class_name }}</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Severity Grade</span>
+                <span class="result-value">Grade {{ record.predicted_class }}</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Confidence</span>
+                <span class="result-value confidence-value">{{ "%.1f"|format(record.confidence * 100) }}%</span>
+            </div>
+            <div class="result-item">
+                <span class="result-label">Risk Level</span>
+                <span class="result-value">
+                    <span class="risk-badge risk-{{ record.risk_level|lower|replace('-','')|replace(' ','') }}">{{ record.risk_level }}</span>
+                </span>
+            </div>
+        </div>
+
+        <div class="image-comparison">
+            <div class="comparison-item">
+                <h4>Original Fundus Image</h4>
+                {% if record.original_image_path %}
+                <img src="/uploads/{{ record.original_image_path }}" alt="Original">
+                {% else %}
+                <p class="empty-state">Original image not available</p>
+                {% endif %}
+            </div>
+            <div class="comparison-item">
+                <h4>Grad-CAM Overlay</h4>
+                {% if record.gradcam_image_path %}
+                <img src="/uploads/{{ record.gradcam_image_path }}" alt="Grad-CAM">
+                {% else %}
+                <p class="empty-state">Grad-CAM visualization not available</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="disclaimer-box">
+            <strong>&#9888; Disclaimer:</strong> AI-generated results are for educational/research purposes only
+            and must not be considered a medical diagnosis. Please consult a qualified ophthalmologist
+            for professional evaluation.
+        </div>
+
+        <div class="action-buttons" style="justify-content:center;">
+            <a href="/analysis" class="btn btn-primary">Analyze Another Image</a>
+            <a href="/history" class="btn btn-secondary">Back to History</a>
+            <a href="/" class="btn btn-secondary">Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

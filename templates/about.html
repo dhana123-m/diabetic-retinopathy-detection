@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}About — RetinaAI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>About RetinaAI</h1>
+        <p class="subtitle">Understanding the Diabetic Retinopathy AI Detection System</p>
+    </div>
+
+    <div class="about-grid">
+        <div class="about-card">
+            <span class="about-icon">&#128064;</span>
+            <h3>What is Diabetic Retinopathy?</h3>
+            <p>Diabetic Retinopathy (DR) is a diabetes complication that affects the eyes. It's caused by damage to the blood vessels of the light-sensitive tissue at the back of the retina. If left untreated, it can lead to vision loss and blindness. Early detection through retinal screening is critical for effective management.</p>
+        </div>
+
+        <div class="about-card">
+            <span class="about-icon">&#127919;</span>
+            <h3>The Five Severity Stages</h3>
+            <ul class="about-list">
+                <li><strong>Grade 0 — No DR:</strong> No visible signs of diabetic retinopathy.</li>
+                <li><strong>Grade 1 — Mild DR:</strong> Minor abnormalities such as microaneurysms.</li>
+                <li><strong>Grade 2 — Moderate DR:</strong> Blood vessels in the retina are swollen and blocked.</li>
+                <li><strong>Grade 3 — Severe DR:</strong> Many blood vessels are blocked, depriving the retina of blood supply.</li>
+                <li><strong>Grade 4 — Proliferative DR:</strong> New, abnormal blood vessels grow, which can bleed and cause retinal detachment.</li>
+            </ul>
+        </div>
+
+        <div class="about-card">
+            <span class="about-icon">&#129302;</span>
+            <h3>How Does the AI Model Work?</h3>
+            <p>The system uses a deep learning model based on <strong>EfficientNet-B0</strong>, a state-of-the-art convolutional neural network architecture. The model is trained on retinal fundus images using transfer learning from ImageNet pre-trained weights and classifies images into one of the five severity grades.</p>
+        </div>
+
+        <div class="about-card">
+            <span class="about-icon">&#128161;</span>
+            <h3>What is EfficientNet?</h3>
+            <p>EfficientNet is a family of convolutional neural network architectures that achieve state-of-the-art accuracy while being significantly more efficient in terms of parameters and computation. EfficientNet-B0 is the smallest variant, suitable for deployment on standard hardware while maintaining high accuracy.</p>
+        </div>
+
+        <div class="about-card">
+            <span class="about-icon">&#128260;</span>
+            <h3>What is Transfer Learning?</h3>
+            <p>Transfer learning is a technique where a model pre-trained on a large dataset (ImageNet) is fine-tuned for a specific task (diabetic retinopathy classification). This approach reduces training time and data requirements while achieving better performance than training from scratch.</p>
+        </div>
+
+        <div class="about-card">
+            <span class="about-icon">&#128065;</span>
+            <h3>What is Grad-CAM?</h3>
+            <p>Grad-CAM (Gradient-weighted Class Activation Mapping) is an explainable AI technique that produces visual explanations for model predictions. It generates a heatmap highlighting the regions of the retinal image that most influenced the model's classification decision, building trust and interpretability.</p>
+        </div>
+
+        <div class="about-card">
+            <span class="about-icon">&#128218;</span>
+            <h3>Dataset Information</h3>
+            <p>This system is designed to work with the <strong>APTOS 2019 Blindness Detection</strong> dataset, which contains 5,590 retinal fundus images labeled by clinicians across the five diabetic retinopathy severity grades. The dataset was collected from Aravind Eye Hospital in India.</p>
+        </div>
+
+        <div class="about-card">
+            <span class="about-icon">&#9888;&#65039;</span>
+            <h3>Model Limitations</h3>
+            <ul class="about-list">
+                <li>The model is trained on a specific dataset and may not generalize to all populations.</li>
+                <li>Image quality, lighting, and camera type can affect predictions.</li>
+                <li>Performance may vary across different demographic groups.</li>
+                <li>The system detects only diabetic retinopathy, not all eye conditions.</li>
+                <li>Confidence scores represent model certainty, not medical certainty.</li>
+            </ul>
+        </div>
+
+        <div class="about-card about-card-disclaimer">
+            <span class="about-icon">&#9888;&#65039;</span>
+            <h3>Healthcare Disclaimer</h3>
+            <p><strong>This system is not intended to provide medical diagnosis.</strong></p>
+            <p>This is an educational/research prototype designed for academic demonstration purposes. AI-generated results are for educational and research purposes only and must not be considered a medical diagnosis. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.</p>
+            <p style="margin-top:10px;">This system should not be used as a substitute for professional medical evaluation, nor should it be used to make clinical decisions without proper medical oversight.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

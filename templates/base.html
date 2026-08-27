@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}RetinaAI — Diabetic Retinopathy Detection{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <span class="brand-icon">&#128064;</span>
+                <span>RetinaAI</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="/" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">Dashboard</a>
+                <a href="/analysis" class="nav-link {% if request.endpoint == 'analysis' %}active{% endif %}">Analysis</a>
+                <a href="/history" class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">History</a>
+                <a href="/about" class="nav-link {% if request.endpoint == 'about' %}active{% endif %}">About</a>
+            </div>
+            <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">&#9776;</button>
+        </div>
+    </nav>
+
+    {% if demo_mode %}
+    <div class="demo-banner">
+        DEMO MODE &mdash; Predictions are simulated. No real AI model is active.
+    </div>
+    {% endif %}
+
+    <div class="disclaimer-bar">
+        &#9888; AI-generated results are for educational/research purposes only. Not a medical diagnosis. Consult a qualified ophthalmologist.
+    </div>
+
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="footer-container">
+            <p><strong>RetinaAI</strong> &mdash; Diabetic Retinopathy Detection System</p>
+            <p class="footer-disclaimer">Educational research prototype. Not intended for medical diagnosis. Powered by EfficientNet-B0 + Grad-CAM.</p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Prediction History — RetinaAI{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Prediction History</h1>
+        <p class="subtitle">Complete log of all retinal image analyses</p>
+    </div>
+
+    {% if predictions %}
+    <div class="section-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+            <h3 style="margin-bottom:0;">All Analyses ({{ predictions|length }} records)</h3>
+            <button class="btn btn-danger btn-sm" onclick="clearHistory()">&#128465; Clear History</button>
+        </div>
+        <div style="overflow-x:auto;">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Image</th>
+                        <th>Prediction</th>
+                        <th>Grade</th>
+                        <th>Confidence</th>
+                        <th>Risk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in predictions %}
+                    <tr onclick="window.location='/result/{{ p.id }}'">
+                        <td>{{ p.id }}</td>
+                        <td>{{ p.timestamp[:16] }}</td>
+                        <td title="{{ p.filename }}">{{ p.filename[:25] }}{% if p.filename|length > 25 %}...{% endif %}</td>
+                        <td><span class="badge badge-class-{{ p.predicted_class }}">{{ p.class_name }}</span></td>
+                        <td>Grade {{ p.predicted_class }}</td>
+                        <td>{{ "%.1f"|format(p.confidence * 100) }}%</td>
+                        <td><span class="risk-badge risk-{{ p.risk_level|lower|replace('-','')|replace(' ','') }}">{{ p.risk_level }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-card">
+        <div class="empty-icon">&#128203;</div>
+        <h3>No Predictions Yet</h3>
+        <p style="color:var(--text-secondary);margin:8px 0 16px;">Start by analyzing a retinal fundus image.</p>
+        <a href="/analysis" class="btn btn-primary">Analyze Image</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function clearHistory() {
+    if (!confirm('Are you sure you want to clear all prediction history? This cannot be undone.')) return;
+    fetch('/clear-history', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showNotification('History cleared successfully.', 'success');
+                window.location.reload();
+            } else {
+                showNotification('Failed to clear history.', 'error');
+            }
+        })
+        .catch(function() { showNotification('Failed to clear history.', 'error'); });
+}
+</script>
+{% endblock %}

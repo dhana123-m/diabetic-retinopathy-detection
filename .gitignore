@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Virtual environment
+venv/
+.venv/
+
+# Dataset and runtime data
+data/
+uploads/
+results/
+database/
+
+# Secrets
+.kaggle/
+
+# OS / editor
+Thumbs.db
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
