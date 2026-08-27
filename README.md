@@ -138,11 +138,16 @@ The system is split into two parts because TensorFlow cannot run inside Vercel's
 serverless functions:
 
 - **`api.py`** — Flask API backend (prediction, history, statistics, media files).
-  Deploy on **Render** (or any Python host that supports a persistent disk and
-  can run TensorFlow). Includes `render.yaml` and `api-requirements.txt`.
+  Deploy on **Render** (or any Python host that can run TensorFlow). Includes
+  `render.yaml` and `api-requirements.txt`. Runs on the free plan: the instance
+  auto-sleeps after ~15 min of no traffic and the SQLite history/uploads are
+  **ephemeral** (reset on redeploy).
 - **`deploy/vercel/`** — static frontend (plain HTML/CSS/JS + Chart.js from CDN).
-  Deploy the folder on **Vercel** as a static site. `vercel.json` proxies every
-  `/api/*` request to the backend, so no CORS is needed in production.
+  Deploy the folder on **Vercel** as a static site. The frontend calls the ML API
+  **directly** (`js/config.js` points to the Render URL in production; the API
+  enables CORS), and `js/api.js` pings `/api/health` on the analysis page to
+  warm the free-tier instance. `vercel.json` still maps `/api/*` → Render as a
+  fallback, but it is not the primary path.
 
 ### 1. Deploy the ML API
 
@@ -150,8 +155,8 @@ Option A — Render blueprint:
 
 1. Push this repository to GitHub.
 2. In Render, create a **Blueprint** from the repo (it reads `render.yaml`).
-3. The service starts via `gunicorn api:app`. Set the `RA_DATA_ROOT` env var to
-   the mounted disk path (`/opt/data` in the blueprint) so history/uploads persist.
+3. The service starts via `gunicorn api:app --preload --workers 1 --threads 2 --timeout 600 --bind 0.0.0.0:$PORT`.
+   Health check: `/api/health`, `DEMO_MODE=false`.
 4. Note the service URL, e.g. `https://retinaai-api.onrender.com`.
 
 Option B — run locally: `python api.py` (serves on `http://127.0.0.1:5000`).
@@ -162,13 +167,15 @@ Option B — run locally: `python api.py` (serves on `http://127.0.0.1:5000`).
 cd deploy/vercel
 python build.py        # regenerate pages after editing ./src
 npm i -g vercel
-vercel                  # link project, upload, done
+vercel --prod          # link project, upload, done
 ```
 
-1. Edit `vercel.json` if your backend URL differs.
-2. The site is fully static. `js/config.js` calls `/api/*` in production
-   (rewritten by Vercel to the backend) or `http://127.0.0.1:5000/api` when
-   opened from `localhost`.
+1. In the Vercel project settings, set **Root Directory** to `deploy/vercel`
+   (needed if the project is connected to GitHub for auto-deploys).
+2. The site is fully static. `js/config.js` calls the Render API directly in
+   production or `http://127.0.0.1:5000/api` when opened from `localhost`.
+3. Optional: the analysis page auto-pings `/api/health` on load to wake the
+   free-tier server so the first prediction is fast.
 
 ### 3. Local split test
 

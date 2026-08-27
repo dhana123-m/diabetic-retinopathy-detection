@@ -1,19 +1,16 @@
 # Render blueprint for the RetinaAI ML API backend.
 # Imports the same Flask app that the Vercel static frontend talks to.
+# NOTE: the live service runs on the free plan (512 MB, no persistent
+# disk, ~15 min idle auto-sleep). Uploads and the SQLite history are
+# ephemeral and reset whenever the instance is redeployed.
 services:
   - type: web
     name: retinaai-api
     runtime: python
-    plan: starter
+    plan: free
     buildCommand: pip install -r api-requirements.txt
-    startCommand: gunicorn api:app --workers 1 --threads 2 --timeout 300 --bind 0.0.0.0:$PORT
+    startCommand: gunicorn api:app --preload --workers 1 --threads 2 --timeout 600 --bind 0.0.0.0:$PORT
     healthCheckPath: /api/health
-    disk:
-      name: retinaai-data
-      mountPath: /opt/data
-      sizeGB: 1
     envVars:
-      - key: RA_DATA_ROOT
-        value: /opt/data
       - key: DEMO_MODE
         value: "false"
